@@ -210,6 +210,8 @@ int main(int argc, char *argv[]) {
   options.add_option('\0', "version", "display version number and exit", [&] { need_print_version = true; });
   options.add_option('\0', "local", "allow the Bot API server to serve local requests",
                      [&] { parameters->local_mode_ = true; });
+  options.add_option('\0', "colon", "allow colon in file names",
+                     [&] { parameters->allow_colon_in_filenames_ = true; });
   options.add_checked_option(
       '\0', "api-id",
       "application identifier for Telegram API access, which can be obtained at https://my.telegram.org (defaults to "
@@ -388,16 +390,23 @@ int main(int argc, char *argv[]) {
       r_temp_file.ok_ref().first.close();
       td::unlink(r_temp_file.ok().second).ensure();
 
-      auto r_temp_dir = td::mkdtemp(working_directory, "1:a");
-      if (r_temp_dir.is_error()) {
-        parameters->allow_colon_in_filenames_ = false;
-        r_temp_dir = td::mkdtemp(working_directory, "1~a");
+      if (parameters->allow_colon_in_filenames_) {
+        auto r_temp_dir = td::mkdtemp(working_directory, "1:a");
         if (r_temp_dir.is_error()) {
           return td::Status::Error(PSLICE() << "Can't create directories in the directory \"" << working_directory
                                             << "\". Use --dir option to specify a writable working directory");
         }
+
+        td::rmdir(r_temp_dir.ok()).ensure();
+      } else {
+        auto r_temp_dir = td::mkdtemp(working_directory, "1~a");
+        if (r_temp_dir.is_error()) {
+          return td::Status::Error(PSLICE() << "Can't create directories in the directory \"" << working_directory
+                                            << "\". Use --dir option to specify a writable working directory");
+        }
+
+        td::rmdir(r_temp_dir.ok()).ensure();
       }
-      td::rmdir(r_temp_dir.ok()).ensure();
     }
 
     if (!temporary_directory.empty()) {

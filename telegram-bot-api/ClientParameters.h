@@ -66,7 +66,7 @@ struct SharedData {
 
 struct ClientParameters {
   td::string working_directory_;
-  bool allow_colon_in_filenames_ = true;
+  bool allow_colon_in_filenames_ = false;
 
   bool local_mode_ = false;
 
